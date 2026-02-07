@@ -1,0 +1,22 @@
+{
+	"name": "mymindos",
+	"private": true,
+	"packageManager": "pnpm@10.20.0",
+	"scripts": {
+		"dev": "pnpm -r --parallel dev",
+		"dev:backend": "pnpm --filter backend start:dev",
+		"dev:frontend": "pnpm --filter frontend dev",
+		"build": "pnpm -r build",
+		"lint": "pnpm -r lint",
+		"test": "pnpm --filter backend test",
+		
+		"prepare": "husky"
+	}, 
+	"devDependencies": {	  
+		"typescript": "^5.9.3",
+		"eslint": "^9.39.1",
+		"prettier": "^3.6.2",
+		"husky": "^9.1.7",
+		"lint-staged": "^16.2.6"
+	}
+}
