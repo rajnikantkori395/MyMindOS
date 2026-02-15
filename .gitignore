@@ -90,3 +90,7 @@ out/
 
 # New Relic
 newrelic_agent.log
+
+
+#local docs
+docs_local/
