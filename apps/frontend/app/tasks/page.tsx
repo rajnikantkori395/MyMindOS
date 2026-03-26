@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '@/lib/hooks/useAuth';
 import {
@@ -8,12 +8,13 @@ import {
   useCreateTaskMutation,
   useUpdateTaskMutation,
   useDeleteTaskMutation,
+  type TaskResponse,
 } from '@/lib/api/taskApi';
-import { Button, Card, CardHeader, CardTitle, CardContent, Input } from '@/components/common';
+import { Button, Card, CardContent, Input } from '@/components/common';
 import Link from 'next/link';
 
 export default function TasksPage() {
-  const { isAuthenticated } = useAuth();
+  const { isAuthenticated, isLoading } = useAuth();
   const router = useRouter();
   const [showForm, setShowForm] = useState(false);
   const [newTask, setNewTask] = useState({ title: '', description: '', dueDate: '' });
@@ -23,9 +24,20 @@ export default function TasksPage() {
   const [updateTask] = useUpdateTaskMutation();
   const [deleteTask] = useDeleteTaskMutation();
 
-  if (!isAuthenticated) {
-    router.push('/signin');
-    return null;
+  useEffect(() => {
+    if (!isLoading && !isAuthenticated) {
+      router.push('/signin');
+    }
+  }, [isAuthenticated, isLoading, router]);
+
+  if (isLoading || !isAuthenticated) {
+    return (
+      <div className="flex min-h-screen items-center justify-center bg-background">
+        <div className="text-center">
+          <p className="text-muted-foreground">Loading...</p>
+        </div>
+      </div>
+    );
   }
 
   const handleCreate = async () => {
@@ -38,7 +50,7 @@ export default function TasksPage() {
     setShowForm(false);
   };
 
-  const handleToggleStatus = async (task: any) => {
+  const handleToggleStatus = async (task: TaskResponse) => {
     const newStatus = task.status === 'completed' ? 'pending' : 'completed';
     await updateTask({ id: task.id, data: { status: newStatus } }).unwrap();
   };

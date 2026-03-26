@@ -5,7 +5,7 @@
 
 'use client';
 
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '@/lib/hooks/useAuth';
 import {
@@ -29,7 +29,7 @@ import {
 import Link from 'next/link';
 
 export default function MemoriesPage() {
-  const { isAuthenticated } = useAuth();
+  const { isAuthenticated, isLoading } = useAuth();
   const router = useRouter();
   const [page, setPage] = useState(1);
   const [searchQuery, setSearchQuery] = useState('');
@@ -53,9 +53,20 @@ export default function MemoriesPage() {
   const [searchMemories, { data: searchResults, isLoading: isSearching }] =
     useSearchMemoriesMutation();
 
-  if (!isAuthenticated) {
-    router.push('/signin');
-    return null;
+  useEffect(() => {
+    if (!isLoading && !isAuthenticated) {
+      router.push('/signin');
+    }
+  }, [isAuthenticated, isLoading, router]);
+
+  if (isLoading || !isAuthenticated) {
+    return (
+      <div className="flex min-h-screen items-center justify-center bg-background">
+        <div className="text-center">
+          <p className="text-muted-foreground">Loading...</p>
+        </div>
+      </div>
+    );
   }
 
   const handleCreate = async () => {
@@ -227,9 +238,9 @@ export default function MemoriesPage() {
             ) : displayMemories.length > 0 ? (
               <div className="space-y-4">
                 <div className="space-y-4">
-                  {displayMemories.map((memory: MemoryResponse) => (
+                  {displayMemories.map((memory: MemoryResponse, rowIndex: number) => (
                     <div
-                      key={memory.id}
+                      key={`memory-row-${rowIndex}-${memory.id ?? 'id'}`}
                       className="rounded-md border border-border bg-card p-4"
                     >
                       <div className="flex items-start justify-between">
@@ -241,9 +252,9 @@ export default function MemoriesPage() {
                             {memory.content}
                           </p>
                           <div className="mt-3 flex flex-wrap gap-2">
-                            {memory.tags.map((tag) => (
+                            {(memory.tags ?? []).map((tag, tagIndex) => (
                               <span
-                                key={tag}
+                                key={`memory-${rowIndex}-tag-${tagIndex}-${String(tag)}`}
                                 className="rounded-full bg-primary/10 px-2 py-1 text-xs text-primary"
                               >
                                 {tag}

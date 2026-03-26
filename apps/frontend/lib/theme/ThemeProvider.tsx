@@ -5,7 +5,15 @@
 
 'use client';
 
-import { createContext, useContext, useEffect, useState, useCallback } from 'react';
+import {
+  createContext,
+  useContext,
+  useEffect,
+  useLayoutEffect,
+  useRef,
+  useState,
+  useCallback,
+} from 'react';
 import { ThemeMode, themeConfig } from './theme.config';
 
 type ThemeContextType = {
@@ -17,22 +25,14 @@ type ThemeContextType = {
 
 const ThemeContext = createContext<ThemeContextType | undefined>(undefined);
 
-export function ThemeProvider({ children }: { children: React.ReactNode }) {
-  const [theme, setThemeState] = useState<ThemeMode>(() => {
-    if (typeof window === 'undefined') return themeConfig.defaultTheme;
-    const stored = localStorage.getItem(themeConfig.storageKey) as ThemeMode | null;
-    return stored || themeConfig.defaultTheme;
-  });
+const useIsomorphicLayoutEffect =
+  typeof window !== 'undefined' ? useLayoutEffect : useEffect;
 
-  const [resolvedTheme, setResolvedTheme] = useState<'light' | 'dark'>(() => {
-    if (typeof window === 'undefined') return 'light';
-    if (theme === 'system') {
-      return window.matchMedia('(prefers-color-scheme: dark)').matches
-        ? 'dark'
-        : 'light';
-    }
-    return theme;
-  });
+export function ThemeProvider({ children }: { children: React.ReactNode }) {
+  // Initial state must match server render (no window/localStorage/matchMedia) to avoid hydration mismatches.
+  const [theme, setThemeState] = useState<ThemeMode>(themeConfig.defaultTheme);
+  const [resolvedTheme, setResolvedTheme] = useState<'light' | 'dark'>('light');
+  const hasHydratedFromStorage = useRef(false);
 
   const setTheme = useCallback((newTheme: ThemeMode) => {
     setThemeState(newTheme);
@@ -45,27 +45,36 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
     setTheme(resolvedTheme === 'light' ? 'dark' : 'light');
   }, [resolvedTheme, setTheme]);
 
-  useEffect(() => {
+  useIsomorphicLayoutEffect(() => {
+    let effectiveTheme: ThemeMode = theme;
+    if (!hasHydratedFromStorage.current) {
+      hasHydratedFromStorage.current = true;
+      const stored = localStorage.getItem(themeConfig.storageKey) as ThemeMode | null;
+      if (stored === 'light' || stored === 'dark' || stored === 'system') {
+        effectiveTheme = stored;
+        if (stored !== theme) {
+          setThemeState(stored);
+        }
+      }
+    }
+
     const root = document.documentElement;
-    
-    // Remove existing theme classes
+
     root.classList.remove('light', 'dark');
-    
-    // Determine resolved theme
+
     let resolved: 'light' | 'dark';
-    if (theme === 'system') {
+    if (effectiveTheme === 'system') {
       resolved = window.matchMedia('(prefers-color-scheme: dark)').matches
         ? 'dark'
         : 'light';
     } else {
-      resolved = theme;
+      resolved = effectiveTheme;
     }
-    
+
     setResolvedTheme(resolved);
     root.classList.add(resolved);
 
-    // Listen for system theme changes
-    if (theme === 'system') {
+    if (effectiveTheme === 'system') {
       const mediaQuery = window.matchMedia('(prefers-color-scheme: dark)');
       const handleChange = (e: MediaQueryListEvent) => {
         const newResolved = e.matches ? 'dark' : 'light';
@@ -77,6 +86,7 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
       mediaQuery.addEventListener('change', handleChange);
       return () => mediaQuery.removeEventListener('change', handleChange);
     }
+    return undefined;
   }, [theme]);
 
   return (

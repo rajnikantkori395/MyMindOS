@@ -69,7 +69,7 @@ export default function ChatPage() {
             <div className="flex-1 overflow-y-auto p-4 space-y-4">
               {chat.messages.map((m, i) => (
                 <div
-                  key={i}
+                  key={`${selectedChatId}-${m.role}-${m.content}-${i}`}
                   className={`flex ${m.role === 'user' ? 'justify-end' : 'justify-start'}`}
                 >
                   <div

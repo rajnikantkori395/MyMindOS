@@ -28,7 +28,7 @@ JWT_REFRESH_SECRET=your-refresh-secret-here
 
 **Example:**
 ```env
-NODE_ENV=development
+NODE_ENV=development        
 PORT=3000
 API_PREFIX=/api
 FRONTEND_URL=http://localhost:3001
