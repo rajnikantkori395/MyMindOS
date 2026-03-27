@@ -10,6 +10,7 @@ import {
   useDeleteTaskMutation,
   type TaskResponse,
 } from '@/lib/api/taskApi';
+import { getApiErrorMessage } from '@/lib/api/getApiErrorMessage';
 import { Button, Card, CardContent, Input } from '@/components/common';
 import Link from 'next/link';
 
@@ -18,6 +19,7 @@ export default function TasksPage() {
   const router = useRouter();
   const [showForm, setShowForm] = useState(false);
   const [newTask, setNewTask] = useState({ title: '', description: '', dueDate: '' });
+  const [taskError, setTaskError] = useState<string | null>(null);
 
   const { data: tasksData } = useGetTasksQuery({ page: 1, limit: 100 });
   const [createTask] = useCreateTaskMutation();
@@ -42,24 +44,50 @@ export default function TasksPage() {
 
   const handleCreate = async () => {
     if (!newTask.title) return;
-    await createTask({
-      ...newTask,
-      dueDate: newTask.dueDate || undefined,
-    }).unwrap();
-    setNewTask({ title: '', description: '', dueDate: '' });
-    setShowForm(false);
+    setTaskError(null);
+    try {
+      await createTask({
+        ...newTask,
+        dueDate: newTask.dueDate || undefined,
+      }).unwrap();
+      setNewTask({ title: '', description: '', dueDate: '' });
+      setShowForm(false);
+    } catch (err) {
+      setTaskError(getApiErrorMessage(err));
+    }
   };
 
   const handleToggleStatus = async (task: TaskResponse) => {
     const newStatus = task.status === 'completed' ? 'pending' : 'completed';
-    await updateTask({ id: task.id, data: { status: newStatus } }).unwrap();
+    setTaskError(null);
+    try {
+      await updateTask({ id: task.id, data: { status: newStatus } }).unwrap();
+    } catch (err) {
+      setTaskError(getApiErrorMessage(err));
+    }
+  };
+
+  const handleDelete = async (id: string) => {
+    setTaskError(null);
+    try {
+      await deleteTask(id).unwrap();
+    } catch (err) {
+      setTaskError(getApiErrorMessage(err));
+    }
   };
 
   return (
     <div className="min-h-screen bg-background p-8">
       <div className="mx-auto max-w-4xl">
         <div className="mb-8 flex items-center justify-between">
-          <h1 className="text-3xl font-bold">Tasks</h1>
+          <div>
+            <h1 className="text-3xl font-bold">Tasks</h1>
+            {taskError && (
+              <p className="mt-2 text-sm text-destructive" role="alert">
+                {taskError}
+              </p>
+            )}
+          </div>
           <div className="flex gap-2">
             <Link href="/dashboard">
               <Button variant="outline">Back</Button>
@@ -126,7 +154,7 @@ export default function TasksPage() {
                     <Button
                       variant="outline"
                       size="sm"
-                      onClick={() => deleteTask(task.id)}
+                      onClick={() => void handleDelete(task.id)}
                     >
                       Delete
                     </Button>

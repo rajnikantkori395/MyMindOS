@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '@/lib/hooks/useAuth';
 import {
@@ -10,24 +10,37 @@ import {
   useSendMessageMutation,
   useDeleteChatMutation,
 } from '@/lib/api/chatApi';
-import { Button, Card, CardHeader, CardTitle, CardContent, Input } from '@/components/common';
-import Link from 'next/link';
+import { Button, Input } from '@/components/common';
 
 export default function ChatPage() {
-  const { isAuthenticated } = useAuth();
+  const { isAuthenticated, isLoading } = useAuth();
   const router = useRouter();
   const [selectedChatId, setSelectedChatId] = useState<string | null>(null);
   const [message, setMessage] = useState('');
 
-  const { data: chatsData } = useGetChatsQuery({ page: 1, limit: 50 });
+  const { data: chatsData } = useGetChatsQuery(
+    { page: 1, limit: 50 },
+    { skip: !isAuthenticated || isLoading },
+  );
   const { data: chat } = useGetChatByIdQuery(selectedChatId!, { skip: !selectedChatId });
   const [createChat] = useCreateChatMutation();
   const [sendMessage, { isLoading: isSending }] = useSendMessageMutation();
   const [deleteChat] = useDeleteChatMutation();
 
-  if (!isAuthenticated) {
-    router.push('/signin');
-    return null;
+  useEffect(() => {
+    if (!isLoading && !isAuthenticated) {
+      router.push('/signin');
+    }
+  }, [isAuthenticated, isLoading, router]);
+
+  if (isLoading || !isAuthenticated) {
+    return (
+      <div className="flex min-h-screen items-center justify-center bg-background">
+        <div className="text-center">
+          <p className="text-muted-foreground">Loading...</p>
+        </div>
+      </div>
+    );
   }
 
   const handleNewChat = async () => {

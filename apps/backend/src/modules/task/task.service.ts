@@ -41,6 +41,9 @@ export class TaskService {
     if (data.status === 'completed' && !data.completedAt) {
       data.completedAt = new Date();
     }
+    if (data.status && data.status !== 'completed') {
+      data.completedAt = null;
+    }
     return this.taskModel.findByIdAndUpdate(id, data, { new: true }).exec();
   }
 
